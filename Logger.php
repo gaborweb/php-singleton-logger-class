@@ -10,21 +10,20 @@ class Logger {
     const LEVEL_INFO = 1;
     const LEVEL_WARNING = 2;
     const LEVEL_ALERT = 4;
-    const DIR = "_log_";                // alapértelmezett mappa, amelybe a logfile.log dokumentum létrejön
-    const FILENAME = "logfile.log";     // dokumentum neve
+    const DIR = "_log_";                // alapértelmezett mappa, melyben a log fájl létrejön
 
     private static $instance = null;
     private static $enabled_level = 0;
     private static $log_file_path;
 
     private function __construct() {
-
+        
     }
 
     public static function inst() {
         if (!self::$instance) {
             self::$instance = new Logger();
-            self::setFilePath();
+            self::setFilePath();                    // a 23:59:59 mp-kor történő logfile-ba kiírás esetében best practice
         }
 
         return self::$instance;
@@ -42,22 +41,28 @@ class Logger {
 
     public static function need($level) {
 
-        if ($level & self::$enabled_level) {        // bitwise(bitművelet) operátor     1&1=>0001&0001->0001=1 , 2&2=>0010&0010->0010=2 , stb...
+        if ($level & self::$enabled_level) {        // bitwise(bitművelet) operátor     1&1=>0001&0001->0001=1 , 2&2=>0010&0010->0010=2 , 
             return true;
         }
 
         return false;
     }
 
-    public static function timeStamp() {            
+    public static function timeStamp() {
 
         $date = new DateTime();
         return $date->format('Y-m-d H:i:s');
     }
 
+    private static function setFileName() {
+
+        $date = new DateTime();
+        return $date->format('Y-m-d') . "_logfile.log";
+    }
+    
     private static function setFilePath() {
 
-        self::$log_file_path = self::DIR . DIRECTORY_SEPARATOR . self::FILENAME;
+        self::$log_file_path = self::DIR . DIRECTORY_SEPARATOR . self::setFileName();
     }
 
     private static function getVarName($var) {
@@ -91,53 +96,56 @@ class Logger {
         }
     }
 
-    private static function fileComposer($log_type, $result) {
+    private static function messageComposer($log_type, $result) {
 
-        return self::timeStamp() . " - " . $log_type . " - " . $result . PHP_EOL;
+         if (!isset($_SESSION)) {
+            session_start();
+        }
+        return self::timeStamp() . " - " . session_id() . " - " . $log_type . " - " . $result . PHP_EOL;
     }
 
     private static function putContent($content) {
 
-        file_put_contents(self::$log_file_path, "\xEF\xBB\xBF".$content, FILE_APPEND| LOCK_EX);
+        file_put_contents(self::$log_file_path, "\xEF\xBB\xBF".$content, FILE_APPEND | LOCK_EX);
     }
 
     private static function logWriterAll($result, $log_type) {
 
         $result = "Változó neve: $" . self::getVarName($result) . " - értéke: " . self::varTest($result);
-        self::putContent(self::fileComposer($log_type, $result));
+        self::putContent(self::messageComposer($log_type, $result));
         self::writerCheck(self::$log_file_path);
     }
 
     private static function logWriterFail($result, $log_type) {
 
-        self::putContent(self::fileComposer($log_type, $result));
+        self::putContent(self::messageComposer($log_type, $result));
         self::writerCheck(self::$log_file_path);
     }
 
     private static function logWriterArray($result, $log_type) {
 
         $result = "Tömb tartalma: " . self::arrayTest($result);
-        self::putContent(self::fileComposer($log_type, $result));
+        self::putContent(self::messageComposer($log_type, $result));
         self::writerCheck(self::$log_file_path);
     }
 
     private static function logWriterObj($result, $log_type) {
 
         $result = "Objektum tartalma: " . self::objTest($result);
-        self::putContent(self::fileComposer($log_type, $result));
+        self::putContent(self::messageComposer($log_type, $result));
         self::writerCheck(self::$log_file_path);
     }
 
     private static function logWriterVar($result, $log_type) {
 
-        $result = "Változó tartalma: $" . self::varTest($result);
-        self::putContent(self::fileComposer($log_type, $result));
+        $result = "Változó tartalma: " . self::varTest($result);
+        self::putContent(self::messageComposer($log_type, $result));
         self::writerCheck(self::$log_file_path);
     }
 
     private static function logWriterText($result, $log_type) {
 
-        self::putContent(self::fileComposer($log_type, $result));
+        self::putContent(self::messageComposer($log_type, $result));
         self::writerCheck(self::$log_file_path);
     }
 
@@ -187,7 +195,6 @@ class Logger {
     }
 
 }
-
 
 /*
 
